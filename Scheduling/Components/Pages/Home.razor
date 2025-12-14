@@ -1,11 +1,13 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Authorization
+@using Scheduling.Data.Interfaces
 @rendermode InteractiveServer
 @attribute [Authorize]
+@inject IEventService EventService
 
 <PageTitle>Главная</PageTitle>
 
-<h1>Расписание</h1>
+
 
 <!-- Форма для добавления нового события -->
 <div class="mb-4 p-3 border rounded">
@@ -14,10 +16,35 @@
         <div class="col-md-3">
             <label>Название:</label>
             <input @bind="_newEventTitle" class="form-control" />
+            <label>Тип:</label>
+            <select @bind="_newEventType" class="form-select">
+                <option value="Лекция">Лекция</option>
+                <option value="Практика">Практика</option>
+                <option value="Лабораторная">Лабораторная</option>
+            </select>
+
+            <label>Преподаватель:</label>
+            <select @bind="_newEventLector" class="form-select">
+                <option value="Иванов И.И.">Иванов И.И.</option>
+                <option value="Петров П.П.">Петров П.П.</option>
+                <option value="Сидоров С.С.">Сидоров С.С.</option>
+                <option value="Востриков В.И.">Востриков В.И.</option>
+            </select>
+            <label>Аудитория:</label>
+            <input @bind="_newEventAddr" class="form-control" />
         </div>
         <div class="col-md-2">
-            <label>Слот (1-8):</label>
-            <input type="number" @bind="_newEventSlot" min="1" max="8" class="form-control" />
+            <label>Слот</label>
+            <select @bind="_newEventSlot" class="form-select">
+                <option value="1">08:00-09:35</option>
+                <option value="2">09:45-11:20</option>
+                <option value="3">11:30-13:05</option>
+                <option value="4">13:45-15:20</option>
+                <option value="5">15:30-17:05</option>
+                <option value="6">17:15-18:50</option>
+                <option value="7">19:00-20:25</option>
+                <option value="8">20:35-22:00</option>
+            </select>
         </div>
         <div class="col-md-2">
             <label>День недели:</label>
@@ -54,17 +81,43 @@
         {
             <tr>
                 <td>
-                    @switch(slot)
+                    @switch (slot)
                     {
-                        case 1: <text>08:00-09:35</text> break;
-                        case 2: <text>09:45-11:20</text> break;
-                        case 3: <text>11:30-13:05</text> break;
-                        case 4: <text>13:45-15:20</text> break;
-                        case 5: <text>15:30-17:05</text> break;
-                        case 6: <text>17:15-18:50</text> break;
-                        case 7: <text>19:00-20:25</text> break;
-                        case 8: <text>20:35-22:00</text> break;
-                        default: <text>Слот @slot</text> break;
+                        case 1:
+                            <text>08:00-09:35</text>
+                            break;
+                        case 2:
+
+                            <text>09:45-11:20</text>
+                            break;
+                        case 3:
+
+                            <text>11:30-13:05</text>
+                            break;
+                        case 4:
+
+                            <text>13:45-15:20</text>
+                            break;
+                        case 5:
+
+                            <text>15:30-17:05</text>
+                            break;
+                        case 6:
+
+                            <text>17:15-18:50</text>
+                            break;
+                        case 7:
+
+                            <text>19:00-20:25</text>
+                            break;
+                        case 8:
+
+                            <text>20:35-22:00</text>
+                            break;
+                        default:
+
+                            <text>Слот @slot</text>
+                            break;
                     }
                 </td>
                 @for (int day = 1; day <= 6; day++) @* 1=Понедельник, 6=Суббота *@
@@ -78,10 +131,19 @@
                             foreach (var ev in events)
                             {
                                 <div class="event-card p-2 mb-1 border rounded">
-                                    <strong>@ev.Title</strong><br />
-                                    <small>@ev.Type</small><br />
-                                    <small>@ev.Lector</small><br />
-                                    <small>@ev.Addr</small>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>@ev.Title</strong><br />
+                                            <small>@ev.Type</small><br />
+                                            <small>@ev.Lector</small><br />
+                                            <small>@ev.Addr</small>
+                                        </div>
+                                        <button @onclick="() => DeleteEvent(ev.Id)"
+                                                class="btn btn-sm btn-danger"
+                                                title="Удалить событие">
+                                            ×
+                                        </button>
+                                    </div>
                                 </div>
                             }
                         }
@@ -94,13 +156,16 @@
 
 @code {
     private string _newEventTitle = "";
+    private string _newEventAddr = "";
+    private string _newEventLector = "";
+    private string _newEventType = "";
     private int _newEventSlot = 1;
     private int _newEventDay = 1;
-    private EventService _eventService  = new EventService();
+    private List<EventItem>? _events;
 
     private List<EventItem> GetEventsForSlotAndDay(int slot, DayOfWeek day)
     {
-        return _eventService.GetAllEvents()
+        return EventService.GetAllEvents()
             .Where(e => e.Slot == (TimeSlot)slot && e._dayOfWeek == day)
             .ToList();
     }
@@ -109,28 +174,52 @@
     {
         if (!string.IsNullOrWhiteSpace(_newEventTitle))
         {
-            _eventService.AddEvent(
+            EventService.AddEvent(
                 _newEventTitle,
-                "Адрес по умолчанию",
-                "Лектор по умолчанию",
-                "Тип по умолчанию",
+                "Ауд. " + _newEventAddr,
+                _newEventLector,
+                _newEventType,
                 (TimeSlot)_newEventSlot,
                 (DayOfWeek)_newEventDay);
-            
+
             // Сброс формы
             _newEventTitle = "";
-            
-            // Уведомление об обновлении UI
+            _newEventAddr = "";
+            _newEventLector = "";
+            _newEventType = "Лекция";
+            _newEventSlot = 1;
+            _newEventDay = 1;
+
+            LoadEvents();
             StateHasChanged();
         }
     }
 
-    // Инициализация тестовых данных
+    private void DeleteEvent(int eventId)
+    {
+        EventService.RemoveEvent(eventId);
+        LoadEvents();
+        StateHasChanged();
+    }
+
+    private void LoadEvents()
+    {
+        _events = EventService.GetAllEvents();
+    }
+
     protected override void OnInitialized()
     {
-        // Добавление тестовых событий
-        _eventService.AddEvent("Математика", "Ауд. 101", "Иванов И.И.", "Лекция", TimeSlot.Slot1, DayOfWeek.Monday);
-        _eventService.AddEvent("Физика", "Ауд. 203", "Петров П.П.", "Практика", TimeSlot.Slot2, DayOfWeek.Tuesday);
-        _eventService.AddEvent("Программирование", "Ауд. 305", "Сидоров С.С.", "Лабораторная", TimeSlot.Slot3, DayOfWeek.Wednesday);
+        LoadEvents();
+
+        if (_events == null || _events.Count == 0)
+        {
+            // Добавляем тестовые данные с уникальными Id
+            EventService.AddEvent("Математика", "Ауд. 101", "Иванов И.И.", "Лекция", TimeSlot.Slot1, DayOfWeek.Monday);
+            EventService.AddEvent("Физика", "Ауд. 203", "Петров П.П.", "Практика", TimeSlot.Slot2, DayOfWeek.Tuesday);
+            EventService.AddEvent("Программирование", "Ауд. 305", "Сидоров С.С.", "Лабораторная", TimeSlot.Slot3, DayOfWeek.Wednesday);
+            EventService.AddEvent("Физра", "Спорт. зал", "Востриков В.И.", "Практика", TimeSlot.Slot4, DayOfWeek.Wednesday);
+        }
+
+        LoadEvents();
     }
 }

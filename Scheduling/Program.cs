@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Scheduling.Components;
 using Scheduling.Components.Account;
 using Scheduling.Data;
+using Scheduling.Data.Interfaces;
+using Scheduling.Data.Services;
 
 namespace Scheduling
 {
@@ -40,6 +42,7 @@ namespace Scheduling
                 .AddDefaultTokenProviders();
 
             builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+            builder.Services.AddScoped<IEventService, EventService>();
 
             var app = builder.Build();
 
